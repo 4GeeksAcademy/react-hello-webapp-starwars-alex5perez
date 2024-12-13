@@ -1,26 +1,75 @@
-import React, { useState, useEffect, useContext } from "react";
-import PropTypes from "prop-types";
-import { Link, useParams } from "react-router-dom";
+import React, { useEffect, useState, useContext } from "react";
 import { Context } from "../store/appContext";
+import { useParams } from "react-router-dom";
 
-export const Single = props => {
-	const { store, actions } = useContext(Context);
-	const params = useParams();
-	return (
-		<div className="jumbotron">
-			<h1 className="display-4">This will show the demo element: {store.demo[params.theid].title}</h1>
+export const Single = () => {
+  const { theid, category } = useParams();
+  const [card, setCard] = useState(null);
+  const { store } = useContext(Context);
+  const { infoMapping } = store;
+  const details = infoMapping[category] || [];
 
-			<hr className="my-4" />
+  useEffect(() => {
+    fetch(`https://swapi.tech/api/${category}/${theid}/`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Not Found");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        setCard(data.result.properties);
+      })
+      .catch((err) => console.error(err));
+  }, [theid, category]);
 
-			<Link to="/">
-				<span className="btn btn-primary btn-lg" href="#" role="button">
-					Back home
-				</span>
-			</Link>
-		</div>
-	);
-};
+  const getImageUrl = (id, category) => {
+    return category === "people"
+      ? `https://starwars-visualguide.com/assets/img/characters/${id}.jpg`
+      : `https://starwars-visualguide.com/assets/img/${category}/${id}.jpg`;
+  };
 
-Single.propTypes = {
-	match: PropTypes.object
+  if (!card) {
+    return <h1>Loading...</h1>;
+  }
+
+  const imageUrl = getImageUrl(theid, category);
+
+  return (
+    <div className="container mt-4">
+      <div className="row justify-content-center">
+        <div className="col-12 col-md-8 col-lg-6">
+          <h2 className="text-center">{card.name || card.title}</h2>
+          <img
+            src={imageUrl}
+            alt={card.name || card.title}
+            style={{
+              width: "100%",
+              height: "300px",
+              border: "2px solid white",
+              borderRadius: "10px",
+              objectFit: "contain",
+            }}
+            onError={({ currentTarget }) => {
+              currentTarget.onerror = null;
+              currentTarget.src =
+                "https://starwars-visualguide.com/assets/img/placeholder.jpg";
+            }}
+          />
+          <div className="row mt-4 text-center">
+            <div className="col-12">
+              <h4>Details</h4>
+              <div className="row">
+                {details.map((detail, index) => (
+                  <div key={index} className="col-6">
+                    <strong>{detail.label}:</strong> {card[detail.key] || "N/A"}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
